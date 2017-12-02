@@ -11,7 +11,7 @@ float radio=10;
 int indicador=0;
 float rx,ry;
 float winWid = 1000,winHeight = 600;
-int cont=0,z=0;
+int cont=0,z=0,contar_nodos=0;
 int X1,X2,Y1,Y2;  /*contenfra los valores del click izquierdo*/
 
 /*Estructura que contiene los tados en el archivo*/
@@ -20,7 +20,7 @@ struct ciudad{
 	float cor_y,cor_x;
 }nod;	   
 
-/*Estructura de tipo lista que contiene los vertices*/
+/*Estructura de tipo lista que contiene los vertices (SOLO LA USAREMOS EN LA PARTE GRAFICA)*/
 struct vertice{
 	char nodo[20];
 	float medida;
@@ -38,7 +38,9 @@ struct arista{
 	struct arista *siguiente;
 };
 
+/*En esta estructtura trabajaremos en el argoritmo, sustituira a vertices*/
 struct vertice *inicio=NULL;
+struct router *rout=NULL;
 
 int llenado()
 {
@@ -94,6 +96,7 @@ int lee_archivo(struct vertice **inicio){
 		if(!nuevo){
 			return 0;
 		}
+
 		if(fread(&nod,sizeof(nod),1,archivo)!=0)
 		{
 			printf("\n\nNodo: %s",nod.nodo);
@@ -107,6 +110,7 @@ int lee_archivo(struct vertice **inicio){
 			nuevo->conexion=NULL;
 			nuevo->siguiente=*inicio;
 			*inicio=nuevo;
+			contar_nodos=contar_nodos+1;
 		}
 	}
 	return 0;
@@ -194,12 +198,10 @@ int enlaza(struct vertice **inicio){
 	return 1;
 }  
 
-int menuempleados()
-{
+int menuempleados(){
 	int opc;
 	char c;
-	do
-	{
+	do{
 		printf("1.Insertar cuidad\n2.Ver archivo\n3.Mostrar vertices\n4.Enlazar nodos\n5.SALIR");
 		printf("\nOPCION:");
 		scanf("%d",&opc);
@@ -318,6 +320,22 @@ void motion(int x, int y)/*este metodo realizara las funciones para darle coorde
 	ry=ry-float(y);
 }
 
+int mete_archivo(char nodo[],float x,float y){ //Esta funcion mete los nodos creados por el mause
+	FILE *archivo;
+	archivo=fopen("archi.dat", "a+b");
+	if(!archivo)
+	{
+		printf("\nERROR DE ARCHIVO\n");
+		system("pause");
+		return 0;
+	}
+	strcpy(nod.nodo,nodo);
+	nod.cor_x=x;
+	nod.cor_y=y;
+	fwrite(&nod,sizeof(nod),1,archivo);
+	fclose(archivo);
+}
+
 void mousebutton(int button, int state, int x, int y)/*metodo para dar moviemiento a traves del mouse*/
 {
 	printf("\nMauseButton -> X: %d Y:%d",x,y);
@@ -325,12 +343,13 @@ void mousebutton(int button, int state, int x, int y)/*metodo para dar moviemien
 	ry = winHeight;
 	ry=ry-float(y);
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
-		/*rx = float(x);
-		ry = winHeight;
-		ry=ry-float(y);*/
+		char cadena[20];
+		sprintf(cadena,"Router %d",contar_nodos);
+		contar_nodos=contar_nodos+1;
 		printf("CLICK IZQUIERDO");
 		dibujarEsfera(rx,ry);
-		
+		dibuja_cadena(cadena,rx-20,ry+10);
+		mete_archivo(cadena,rx,ry);
 	}
 	if(button== GLUT_RIGHT_BUTTON){
 		printf("CLICK DERECHO");
@@ -405,5 +424,6 @@ tendra las corrdenas origen y destino, o los apuntadores.
 -Insertar el nombre de los nodos   (ya quedó)
 -Falta la funcion del mause, al dar click derecho, crear nodo (Ya quedo)
 -Tener en el meni de mause una opcion de enlazar nodos 
--Insertar algoritmo de Dijstra
+-Insertar algoritmo de Dijstra  (Ya se hizo el algoritmo, solo falta implementarlo en el proyecto)
+-Ya le insertamos un ID al router cada vezque se crea un nodo con click izquerdo  (Ya quedo)
 */
