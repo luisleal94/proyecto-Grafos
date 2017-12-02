@@ -37,8 +37,14 @@ struct arista{
 	float peso;
 	struct arista *siguiente;
 };
-
 /*En esta estructtura trabajaremos en el argoritmo, sustituira a vertices*/
+struct router{
+	char id[20];
+	struct arista *unir;
+	float cor_y,cor_x;
+	struct router *siguiente;
+};
+
 struct vertice *inicio=NULL;
 struct router *rout=NULL;
 
@@ -81,7 +87,15 @@ int cuenta_conexiones(struct arista *inicio,int cont){
 	cuenta_conexiones(inicio->siguiente,cont);
 }
 
-int lee_archivo(struct vertice **inicio){
+int cuenta_router(struct router *inicio,int &cont){
+	if(inicio==NULL){
+		return cont;
+	}
+	cont=cont+1;
+	cuenta_router(inicio->siguiente,cont);
+}
+
+int lee_archivo(struct vertice **inicio,struct router **rout){
 	char ciudad[20];
 	FILE *archivo;
 	archivo=fopen("archi.dat","r+b");
@@ -94,6 +108,11 @@ int lee_archivo(struct vertice **inicio){
 	{
 		struct vertice *nuevo=(struct vertice *)malloc(sizeof(struct vertice));
 		if(!nuevo){
+			return 0;
+		}
+
+		struct router *nuevo2=(struct router *)malloc(sizeof(struct router));
+		if(!nuevo2){
 			return 0;
 		}
 
@@ -110,6 +129,13 @@ int lee_archivo(struct vertice **inicio){
 			nuevo->conexion=NULL;
 			nuevo->siguiente=*inicio;
 			*inicio=nuevo;
+
+			strcpy(nuevo2->id,ciudad);
+			nuevo2->cor_x=nod.cor_x;
+			nuevo2->cor_y=nod.cor_y;
+			nuevo2->unir=NULL;
+			nuevo2->siguiente=*rout;
+			*rout=nuevo2;
 			contar_nodos=contar_nodos+1;
 		}
 	}
@@ -211,7 +237,7 @@ int menuempleados(){
 		case 1: llenado();
 		break;
 		case 2: libera_lista(&inicio);
-		lee_archivo(&inicio); break;
+				lee_archivo(&inicio,&rout); break;
 		case 3: mostrar_lista(inicio); break;
 		case 4: enlaza(&inicio); break;
 		}
@@ -268,8 +294,10 @@ void dibujarEsfera(int pelotax,int pelotay){
 }
 
 void dibuja_nodo(){
-	int cont=0,cont2=0;
+	int cont=0,cont2=0,cont3=0;
 	cuenta_nodos(inicio,cont);
+	cuenta_router(rout,cont3);
+	printf("\nCantidad de router: %d",cont3);
 	struct vertice *aux=inicio;
 	printf("\nCantidad de vertices: %d",cont);
 	for (int i = 0; i <cont; i++){
@@ -334,6 +362,17 @@ int mete_archivo(char nodo[],float x,float y){ //Esta funcion mete los nodos cre
 	nod.cor_y=y;
 	fwrite(&nod,sizeof(nod),1,archivo);
 	fclose(archivo);
+
+	struct router *nuevo=(struct router *)malloc(sizeof(struct router));
+		if(!nuevo){
+			return 0;
+	}
+	strcpy(nuevo->id,nodo);
+	nuevo->cor_x=x;
+	nuevo->cor_y=y;
+	nuevo->unir=NULL;
+	nuevo->siguiente=rout;
+	rout=nuevo;
 }
 
 void mousebutton(int button, int state, int x, int y)/*metodo para dar moviemiento a traves del mouse*/
@@ -344,7 +383,7 @@ void mousebutton(int button, int state, int x, int y)/*metodo para dar moviemien
 	ry=ry-float(y);
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
 		char cadena[20];
-		sprintf(cadena,"Router %d",contar_nodos);
+		sprintf(cadena,"Router %d",contar_nodos+1);
 		contar_nodos=contar_nodos+1;
 		printf("CLICK IZQUIERDO");
 		dibujarEsfera(rx,ry);
