@@ -251,6 +251,18 @@ int menuempleados(){
 	return 0;
 }
 
+int valida_nodo(struct router *inicio,float x,float y){
+	if(inicio==NULL){
+		return 0;
+	}
+	if(inicio->cor_x>=(x-5) and inicio->cor_x<=(x+5)){
+		if (inicio->cor_y>=(y-5) and inicio->cor_y<=(y+5)){
+			printf("\nnodo:%s\n",inicio->id);
+			return 1;
+		}
+	}
+	valida_nodo(inicio->siguiente,x,y);
+}
 /***********************************  PARTE GRAFICA************************************/
 void dibuja_cadena(char *cadena,float x, float y){
 	unsigned int i;
@@ -393,8 +405,24 @@ void mousebutton(int button, int state, int x, int y)/*metodo para dar moviemien
 	if(button== GLUT_RIGHT_BUTTON){
 		printf("CLICK DERECHO");
 		if(state == GLUT_DOWN){
-			cont=cont+1;
-			if(cont==1){
+			if(valida_nodo(rout,rx,ry)==1){
+				printf("\nSe encontro nodo");
+				cont=cont+1;
+				if(cont==1){
+					X1=rx;
+					Y1=ry;
+					printf("X1: %d, X2:%d",X1,Y2);
+				}
+				if(cont==2){
+					printf("SE dio dos clicks derechos");
+					X2=rx;
+					Y2=ry;
+					printf("X1: %d, X2:%d,Y1:%d,Y2:%d",X1,X2,Y1,Y2);
+					crea_enlace2(X1,X2,Y1,Y2);
+					cont=0;
+				}
+			}
+			/*if(cont==1){
 				X1=rx;
 				Y1=ry;
 				printf("X1: %d, X2:%d",X1,Y2);
@@ -406,7 +434,7 @@ void mousebutton(int button, int state, int x, int y)/*metodo para dar moviemien
 				printf("X1: %d, X2:%d,Y1:%d,Y2:%d",X1,X2,Y1,Y2);
 				crea_enlace2(X1,X2,Y1,Y2);
 				cont=0;
-			}
+			}*/
 		}		
 	}
 	glFlush();
@@ -465,4 +493,5 @@ tendra las corrdenas origen y destino, o los apuntadores.
 -Tener en el meni de mause una opcion de enlazar nodos 
 -Insertar algoritmo de Dijstra  (Ya se hizo el algoritmo, solo falta implementarlo en el proyecto)
 -Ya le insertamos un ID al router cada vezque se crea un nodo con click izquerdo  (Ya quedo)
+-Ya guardamos los nuevos nodos en una estructura, esta nos servira para el algrotimo
 */
