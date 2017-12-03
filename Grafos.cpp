@@ -1,6 +1,6 @@
 #include "stdio.h"
 #include "stdlib.h"
-#include "stdlib.h"
+#include "time.h"
 #include "string.h"
 #include "GL/glut.h"
 #include <math.h>
@@ -13,7 +13,9 @@ float rx,ry;
 float winWid = 1000,winHeight = 600;
 int cont=0,z=0,contar_nodos=0;
 int X1,X2,Y1,Y2;  /*contenfra los valores del click izquierdo*/
-
+float peso;
+char cadena[6];
+float cordenada_x,cordenada_y;
 /*Estructura que contiene los tados en el archivo*/
 struct ciudad{
 	char nodo[20];
@@ -48,6 +50,8 @@ struct router{
 struct vertice *inicio=NULL;
 struct router *rout=NULL;
 struct router *rout1,*rout2,*dato;  /*Me servira para enlazar mis nodos*/
+
+void dibuja_cadena(char *cadena,float x, float y);
 int llenado()
 {
 	FILE *archivo;
@@ -295,13 +299,34 @@ struct router *busca_router(struct router *inicio,char rout[]){
 
 
 int enlazar_router(struct router *rout1,struct router *rout2){
-	
 	struct router *aux=busca_router(rout,rout1->id);
 	struct router *aux2=busca_router(rout,rout2->id);
 	printf("\naux:%s",aux->id);
 	printf("\naux2:%s",aux2->id);
-	crea_conexion(&aux->conecta,rout2,rout1,50); /*Provando metiendo pesos de 50*/
-	crea_conexion(&aux2->conecta,rout1,rout2,50);  /*Provando metiendo pesos de 500*/
+	srand (time(NULL));
+	peso=rand()%100;
+	printf("  Peso: %0.1f",peso);
+	sprintf(cadena,"%0.1f",peso);
+	if(aux->cor_x>aux2->cor_x){
+		cordenada_x=aux->cor_x-60;
+		if(aux->cor_y>aux2->cor_y){
+			cordenada_y=aux->cor_y-40;
+		}else{
+			cordenada_y=aux->cor_y+40;
+		}
+	}else{
+		cordenada_x=aux->cor_x+60;
+		if(aux->cor_y>aux2->cor_y){
+			cordenada_y=aux->cor_y-40;
+		}else{
+			cordenada_y=aux->cor_y+40;
+		}
+	}
+	//cordenada_x=aux->cor_x;
+	//cordenada_y=aux->cor_y;
+	printf("\ncordenada para cadena en X:%0.1f  Y:%0.1f\n",fabs(cordenada_x),fabs(cordenada_y));
+	crea_conexion(&aux->conecta,rout2,rout1,peso); /*Provando metiendo pesos de 50*/
+	crea_conexion(&aux2->conecta,rout1,rout2,peso);  /*Provando metiendo pesos de 500*/
 	return 1;
 }
 
@@ -481,6 +506,8 @@ void mousebutton(int button, int state, int x, int y)/*metodo para dar moviemien
 					//printf("\nNodo origen:%s  -  Nodo destino: %s\n",rout1->id,rout2->id);
 					enlazar_router(rout1,rout2);
 					mostrar_router(rout);
+					dibuja_cadena(cadena,fabs(cordenada_x),fabs(cordenada_y));
+					
 				}
 			}
 		}		
