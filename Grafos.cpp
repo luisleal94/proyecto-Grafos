@@ -11,7 +11,7 @@ float radio=10;
 int indicador=0;
 float rx,ry;
 float winWid = 1000,winHeight = 600;
-int cont=0,z=0,contar_nodos=0;
+int cont=0,z=0,contar_nodos=0,cont_click=0;
 int X1,X2,Y1,Y2;  /*contenfra los valores del click izquierdo*/
 float peso;
 char cadena[6];
@@ -33,7 +33,7 @@ struct vertice{
 };
 
 struct arista{
-	char destino[20];
+	char nodo[20];
 	char sucesor[20];
 	float cor_y,cor_x;
 	float peso;
@@ -46,10 +46,26 @@ struct router{
 	float cor_y,cor_x;
 	struct router *siguiente;
 };
+/************Estructuras para el dijkstra*********************/
+struct marcado{
+	char ciudad[20];
+	int marca;
+	char padre[20];
+	float suma;
+	struct marcado *siguiente;
+};
+
+struct etiquetados{
+	char ciudad[20];
+	float suma;
+	int marca;
+	char padre[20];
+	struct etiquetados *siguiente;
+};
 
 struct vertice *inicio=NULL;
 struct router *rout=NULL;
-struct router *rout1,*rout2,*dato;  /*Me servira para enlazar mis nodos*/
+struct router *rout1,*rout2,*rout3,*dato;  /*Me servira para enlazar mis nodos*/
 
 void dibuja_cadena(char *cadena,float x, float y);
 int llenado()
@@ -151,7 +167,7 @@ struct arista *crea_arista(struct arista **inicio,struct vertice *dest,struct ve
 	if(!nuevo){
 		return NULL;
 	}
-	strcpy(nuevo->destino,dest->nodo);
+	strcpy(nuevo->sucesor,dest->nodo);
 	strcpy(nuevo->sucesor,origen->nodo);
 	nuevo->cor_x=dest->cor_x;
 	nuevo->cor_y=dest->cor_y;
@@ -163,7 +179,7 @@ struct arista *crea_arista(struct arista **inicio,struct vertice *dest,struct ve
 
 void mostrar_arista(struct arista *inicio){
 	if(inicio){
-		printf("\t %s -> ",inicio->destino);
+		printf("\t %s -> ",inicio->sucesor);
 		printf("\n\tCordenada x:%0.1f Cordenada Y:%0.1f\n\n",inicio->cor_x,inicio->cor_y);
 		mostrar_arista(inicio->siguiente);
 	} 
@@ -259,7 +275,7 @@ void mostrar_conexion(struct arista *aris){
 	if(!aris){
 		return ;
 	}
-	printf(" Destino: %s",aris->destino);
+	printf(" Destino: %s",aris->sucesor);
 	mostrar_conexion(aris->siguiente);
 }
 void mostrar_router(struct router *rout){
@@ -277,7 +293,7 @@ struct arista *crea_conexion(struct arista **inicio,struct router *dest,struct r
 	if(!nuevo){
 		return NULL;
 	}
-	strcpy(nuevo->destino,dest->id);
+	strcpy(nuevo->sucesor,dest->id);
 	strcpy(nuevo->sucesor,origen->id);
 	nuevo->cor_x=dest->cor_x;
 	nuevo->cor_y=dest->cor_y;
@@ -342,6 +358,201 @@ int valida_nodo(struct router *inicio,float x,float y,struct router **aux){
 		}
 	}
 	valida_nodo(inicio->siguiente,x,y,aux);
+}
+
+/*****************************************************************************************/
+struct marcado *crea_nodo(struct marcado **inicio,char nodo[],float peso,char padre[]){
+	struct marcado *nuevo=(struct marcado *)malloc(sizeof(struct marcado));
+	if(!nuevo){
+		return NULL;
+	}
+	strcpy(nuevo->ciudad,nodo);
+	strcpy(nuevo->padre,padre);
+	nuevo->suma=peso;
+	nuevo->siguiente=*inicio;
+	*inicio=nuevo;
+	return *inicio;
+}
+
+struct etiquetados *crea_etique(struct etiquetados **inicio,char nodo[],float peso,char padre[]){
+	struct etiquetados *nuevo=(struct etiquetados *)malloc(sizeof(struct etiquetados));
+	if(!nuevo){
+		return NULL;
+	}
+	strcpy(nuevo->ciudad,nodo);
+	strcpy(nuevo->padre,padre);
+	nuevo->suma=peso;
+	nuevo->marca=0;
+	nuevo->siguiente=*inicio;
+	*inicio=nuevo;
+	return *inicio;
+}
+
+void mostrar_etiquetados(struct etiquetados *inicio){
+	if(inicio){
+		printf("\n%s   Padre:%s Peso:%0.1f",inicio->ciudad,inicio->padre,inicio->suma);
+		mostrar_etiquetados(inicio->siguiente);
+	}
+	return ;
+}
+
+int mejor_ruta(struct etiquetados *inicio,struct etiquetados **esclavo){
+	if(!inicio){
+		return 0;
+	}
+	if(inicio->suma<(*esclavo)->suma){
+		if(inicio->marca==0){
+			*esclavo=inicio;	
+		}else{
+			mejor_ruta(inicio->siguiente,esclavo);	
+		}
+	}
+	mejor_ruta(inicio->siguiente,esclavo);
+}
+
+struct marcado *busca_marcado(struct marcado *marca,char nodo[]){
+	if(!marca){
+		return NULL;
+	}
+	if(strcmp(nodo,marca->ciudad)==0){
+		printf("\nExiste un nodo en marcados");
+		return marca;
+	}
+	busca_marcado(marca->siguiente,nodo);
+}
+
+struct etiquetados *busca_etique(struct etiquetados *inicio,char nodo[]){
+	if(!inicio){
+		return NULL;
+	}
+	if(strcmp(nodo,inicio->ciudad)==0){
+		return inicio;
+	}
+	busca_etique(inicio->siguiente,nodo);	
+}
+
+int elimina_etiqueta(struct etiquetados **inicio,char nodo[]){
+	if(*inicio==NULL){
+		return 0;
+	}
+	if(strcmp(nodo,(*inicio)->ciudad)==0){
+		struct etiquetados *aux=*inicio;
+		*inicio=(*inicio)->siguiente;
+		free(aux);	
+		return 0;
+	}
+	elimina_etiqueta(&(*inicio)->siguiente,nodo);
+}
+
+int expande(struct arista **inicio,struct marcado **marca,struct etiquetados **etiqueta,char padre[]){
+	if(*inicio==NULL){
+		return 0;
+	}
+	printf("\npadre:%s acomulado:%0.1f",(*marca)->ciudad,(*marca)->suma);
+	struct marcado *aux2=busca_marcado(*marca,(*inicio)->nodo); 	//Tengo que buscar si existe en marcados
+	if(!aux2){
+		struct etiquetados *aux3=busca_etique(*etiqueta,(*inicio)->nodo);
+		if(aux3){
+			printf("\nExiste un nodo en etiqetados aux3:%s  distancia:%0.1f",aux3->ciudad,aux3->suma);
+			printf("\nNodo a comparar: %s   peso:%0.1f",(*inicio)->nodo,(*inicio)->peso+(*marca)->suma);  
+			if(((*inicio)->peso+(*marca)->suma)<aux3->suma){
+				printf("\nes menor,eliminamos a aux3 de etiquetados"); 
+				elimina_etiqueta(etiqueta,aux3->ciudad);  //Eliminamos
+				crea_etique(etiqueta,(*inicio)->nodo,(*marca)->suma+(*inicio)->peso,(*marca)->ciudad);  //insertamos el nuevo nodo menor
+			}else{
+				expande(&(*inicio)->siguiente,marca,etiqueta,padre);
+			}
+		}else{
+			struct etiquetados *aux=crea_etique(etiqueta,(*inicio)->nodo,(*marca)->suma+(*inicio)->peso,padre);
+			printf("\ninsertado:%s",aux->ciudad);	
+		}
+	}
+	expande(&(*inicio)->siguiente,marca,etiqueta,padre);
+}
+
+int contar_marcados(struct marcado *inicio,int cont){
+	if(!inicio){
+		return cont;
+	}
+	cont=cont+1;
+	contar_marcados(inicio->siguiente,cont);
+}
+
+int contar_vertices(struct router *inicio,int cont){
+	if(!inicio){
+		return cont;
+	}
+	cont=cont+1;
+	contar_vertices(inicio->siguiente,cont);
+}
+
+int marcar(struct etiquetados **inicio){
+	(*inicio)->marca=1;
+	return 0;
+}
+
+int busca_indicador(struct etiquetados *inicio,char nodo[]){
+	if(!inicio){
+		return 0;
+	}
+	if(strcmp(nodo,inicio->ciudad)==0){
+		if(inicio->marca==1){
+			printf("Ya esta en marcados, se eligira otro con un menor costo");
+			return 1;
+		}
+	}
+	busca_indicador(inicio->siguiente,nodo);
+}
+
+struct router *busca_rout(struct router *inicio,char nombre[20]){
+	if(inicio==NULL){
+		return NULL;
+	}
+	if(strcmp(nombre,inicio->id)==0){
+		return inicio;
+	}
+	busca_rout(inicio->siguiente,nombre);
+}
+
+int parte2(struct router **inicio,struct marcado **marca,struct etiquetados **etique,char nodo[],struct router *nodos){
+	
+	struct etiquetados *esclavo; 
+	struct router *aux;
+	printf("\nNodo a expandir:%s",(*inicio)->id);
+	if(*marca==NULL){
+		crea_nodo(marca,(*inicio)->id,0,(*inicio)->id);
+	} 
+	expande(&(*inicio)->conecta,marca,etique,(*inicio)->id);  //Expandimos el nodo donde nos encontramos
+	esclavo=*etique;
+	mejor_ruta((*etique)->siguiente,&esclavo);
+	if(busca_indicador(*etique,esclavo->ciudad)==1){
+		esclavo=*etique;
+		mejor_ruta((*etique)->siguiente,&esclavo);
+	}
+	printf("\nMejor ruta: %s  Distancia:%0.1f\n",esclavo->ciudad,esclavo->suma);
+	marcar(&esclavo);
+	crea_nodo(marca,esclavo->ciudad,esclavo->suma,esclavo->padre);  //Lo metemos en los marcados
+	aux=busca_rout(nodos,esclavo->ciudad);
+	//elimina_etiqueta(etique,esclavo->ciudad);  Tenemos que tomar en cuenta que aun sigue en etiquetados y puede repetirce
+	mostrar_etiquetados(*etique);
+	printf("\n");
+	system("pause");
+	if(contar_marcados(*marca,0)==(contar_vertices(nodos,0)-1)){
+		printf("\nSe marcaron todos los nodos\n");
+		printf("\nRuta minima de: %s para cada nodo es de:\n",nodo);
+		mostrar_etiquetados(*etique);
+		return 0;		
+	}
+	parte2(&aux,marca,etique,nodo,nodos);	
+	return 0;
+}
+
+int algritmo(struct router **inicio){
+	struct marcado *marcados=NULL;
+	struct etiquetados *etiqueta=NULL;
+	printf("\nNodo inicial: %s",(*inicio)->id);
+	parte2(inicio,&marcados,&etiqueta,(*inicio)->id,rout);
+	return 1;
 }
 
 /***********************************  PARTE GRAFICA************************************/
@@ -511,6 +722,16 @@ void mousebutton(int button, int state, int x, int y)/*metodo para dar moviemien
 				}
 			}
 		}		
+	}
+	if(button==GLUT_MIDDLE_BUTTON){
+		//Aqui empieza el algoritmo
+		printf("\nClick con scroll");
+		if(valida_nodo(rout,rx,ry,&dato)==1){
+			printf("\nSe encontro nodo");
+			//cont_click=cont_click+1;
+			rout3=dato;
+			algritmo(&rout3);			
+		}
 	}
 	glFlush();
 	glutSwapBuffers();
