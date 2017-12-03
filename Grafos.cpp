@@ -40,14 +40,14 @@ struct arista{
 /*En esta estructtura trabajaremos en el argoritmo, sustituira a vertices*/
 struct router{
 	char id[20];
-	struct arista *unir;
+	struct arista *conecta;
 	float cor_y,cor_x;
 	struct router *siguiente;
 };
 
 struct vertice *inicio=NULL;
 struct router *rout=NULL;
-
+struct router *rout1,*rout2,*dato;  /*Me servira para enlazar mis nodos*/
 int llenado()
 {
 	FILE *archivo;
@@ -133,7 +133,7 @@ int lee_archivo(struct vertice **inicio,struct router **rout){
 			strcpy(nuevo2->id,ciudad);
 			nuevo2->cor_x=nod.cor_x;
 			nuevo2->cor_y=nod.cor_y;
-			nuevo2->unir=NULL;
+			nuevo2->conecta=NULL;
 			nuevo2->siguiente=*rout;
 			*rout=nuevo2;
 			contar_nodos=contar_nodos+1;
@@ -251,18 +251,74 @@ int menuempleados(){
 	return 0;
 }
 
-int valida_nodo(struct router *inicio,float x,float y){
+void mostrar_conexion(struct arista *aris){
+	if(!aris){
+		return ;
+	}
+	printf(" Destino: %s",aris->destino);
+	mostrar_conexion(aris->siguiente);
+}
+void mostrar_router(struct router *rout){
+	if(!rout){
+		return ;
+	}
+	printf("\n");
+	printf("Origen: %s ",rout->id);
+	mostrar_conexion(rout->conecta);
+	mostrar_router(rout->siguiente);
+}
+
+struct arista *crea_conexion(struct arista **inicio,struct router *dest,struct router *origen,float distancia){
+	struct arista *nuevo=(struct arista*)malloc(sizeof(struct arista));
+	if(!nuevo){
+		return NULL;
+	}
+	strcpy(nuevo->destino,dest->id);
+	strcpy(nuevo->sucesor,origen->id);
+	nuevo->cor_x=dest->cor_x;
+	nuevo->cor_y=dest->cor_y;
+	nuevo->peso=distancia;
+	nuevo->siguiente=*inicio;
+	*inicio=nuevo;
+	return *inicio;
+}
+
+struct router *busca_router(struct router *inicio,char rout[]){
+	if(!inicio){
+		return NULL;
+	}
+	if(strcmp(inicio->id,rout)==0){
+		return inicio;
+	}
+	busca_router(inicio->siguiente,rout);
+}
+
+
+int enlazar_router(struct router *rout1,struct router *rout2){
+	
+	struct router *aux=busca_router(rout,rout1->id);
+	struct router *aux2=busca_router(rout,rout2->id);
+	printf("\naux:%s",aux->id);
+	printf("\naux2:%s",aux2->id);
+	crea_conexion(&aux->conecta,rout2,rout1,50); /*Provando metiendo pesos de 50*/
+	crea_conexion(&aux2->conecta,rout1,rout2,50);  /*Provando metiendo pesos de 500*/
+	return 1;
+}
+
+int valida_nodo(struct router *inicio,float x,float y,struct router **aux){
 	if(inicio==NULL){
 		return 0;
 	}
 	if(inicio->cor_x>=(x-5) and inicio->cor_x<=(x+5)){
 		if (inicio->cor_y>=(y-5) and inicio->cor_y<=(y+5)){
+			*aux=inicio;
 			printf("\nnodo:%s\n",inicio->id);
 			return 1;
 		}
 	}
-	valida_nodo(inicio->siguiente,x,y);
+	valida_nodo(inicio->siguiente,x,y,aux);
 }
+
 /***********************************  PARTE GRAFICA************************************/
 void dibuja_cadena(char *cadena,float x, float y){
 	unsigned int i;
@@ -382,7 +438,7 @@ int mete_archivo(char nodo[],float x,float y){ //Esta funcion mete los nodos cre
 	strcpy(nuevo->id,nodo);
 	nuevo->cor_x=x;
 	nuevo->cor_y=y;
-	nuevo->unir=NULL;
+	nuevo->conecta=NULL;
 	nuevo->siguiente=rout;
 	rout=nuevo;
 }
@@ -405,36 +461,28 @@ void mousebutton(int button, int state, int x, int y)/*metodo para dar moviemien
 	if(button== GLUT_RIGHT_BUTTON){
 		printf("CLICK DERECHO");
 		if(state == GLUT_DOWN){
-			if(valida_nodo(rout,rx,ry)==1){
+			if(valida_nodo(rout,rx,ry,&dato)==1){
 				printf("\nSe encontro nodo");
 				cont=cont+1;
 				if(cont==1){
 					X1=rx;
 					Y1=ry;
+					rout1=dato;
 					printf("X1: %d, X2:%d",X1,Y2);
 				}
 				if(cont==2){
 					printf("SE dio dos clicks derechos");
 					X2=rx;
 					Y2=ry;
+					rout2=dato;
 					printf("X1: %d, X2:%d,Y1:%d,Y2:%d",X1,X2,Y1,Y2);
 					crea_enlace2(X1,X2,Y1,Y2);
 					cont=0;
+					//printf("\nNodo origen:%s  -  Nodo destino: %s\n",rout1->id,rout2->id);
+					enlazar_router(rout1,rout2);
+					mostrar_router(rout);
 				}
 			}
-			/*if(cont==1){
-				X1=rx;
-				Y1=ry;
-				printf("X1: %d, X2:%d",X1,Y2);
-			}
-			if(cont==2){
-				printf("SE dio dos clicks derechos");
-				X2=rx;
-				Y2=ry;
-				printf("X1: %d, X2:%d,Y1:%d,Y2:%d",X1,X2,Y1,Y2);
-				crea_enlace2(X1,X2,Y1,Y2);
-				cont=0;
-			}*/
 		}		
 	}
 	glFlush();
@@ -493,5 +541,6 @@ tendra las corrdenas origen y destino, o los apuntadores.
 -Tener en el meni de mause una opcion de enlazar nodos 
 -Insertar algoritmo de Dijstra  (Ya se hizo el algoritmo, solo falta implementarlo en el proyecto)
 -Ya le insertamos un ID al router cada vezque se crea un nodo con click izquerdo  (Ya quedo)
--Ya guardamos los nuevos nodos en una estructura, esta nos servira para el algrotimo
+-Guardamos los nuevos nodos en una estructura, esta nos servira para el algrotimo (Ya quedo)
+-Enlazar los nodos de la nueva estructua segun su enlaze en la parte grafica
 */
