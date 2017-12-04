@@ -11,7 +11,7 @@ float radio=10;
 int indicador=0;
 float rx,ry;
 float winWid = 1000,winHeight = 600;
-int cont=0,z=0,contar_nodos=0;
+int cont=0,z=0,contar_nodos=0,cont_click=0;
 int X1,X2,Y1,Y2;  /*contenfra los valores del click izquierdo*/
 float peso;
 char cadena[6];
@@ -65,8 +65,31 @@ struct etiquetados{
 
 struct vertice *inicio=NULL;
 struct router *rout=NULL;
-struct router *rout1,*rout2,*rout3,*dato;  /*Me servira para enlazar mis nodos*/
+struct marcado *marcados=NULL;
+struct etiquetados *etiqueta=NULL;
+struct router *rout1,*rout2,*rout3,*dato,*rout4;  /*Me servira para enlazar mis nodos*/
 
+/********************  LIBERACION DE MEMORIA    ********************************/
+
+void libera_marcado(struct marcado **marca){
+	if(*marca==NULL){
+		return ;
+	}
+	struct marcado *aux=*marca;
+	*marca=(*marca)->siguiente;
+	libera_marcado(marca);
+}
+
+void libera_etiquetado(struct etiquetados **etiqueta){
+	if(*etiqueta==NULL){
+		return ;
+	}
+	struct etiquetados *aux=*etiqueta;
+	*etiqueta=(*etiqueta)->siguiente;
+	libera_etiquetado(etiqueta);
+}
+
+/**********************************************************************************/
 void dibuja_cadena(char *cadena,float x, float y);
 int llenado()
 {
@@ -338,9 +361,7 @@ int enlazar_router(struct router *rout1,struct router *rout2){
 			cordenada_y=aux->cor_y+40;
 		}
 	}
-	//cordenada_x=aux->cor_x;
-	//cordenada_y=aux->cor_y;
-	printf("\ncordenada para cadena en X:%0.1f  Y:%0.1f\n",fabs(cordenada_x),fabs(cordenada_y));
+	//printf("\ncordenada para cadena en X:%0.1f  Y:%0.1f\n",fabs(cordenada_x),fabs(cordenada_y));
 	crea_conexion(&aux->conecta,rout2,rout1,peso); /*Provando metiendo pesos de 50*/
 	crea_conexion(&aux2->conecta,rout1,rout2,peso);  /*Provando metiendo pesos de 500*/
 	return 1;
@@ -353,7 +374,7 @@ int valida_nodo(struct router *inicio,float x,float y,struct router **aux){
 	if(inicio->cor_x>=(x-5) and inicio->cor_x<=(x+5)){
 		if (inicio->cor_y>=(y-5) and inicio->cor_y<=(y+5)){
 			*aux=inicio;
-			printf("\nnodo:%s\n",inicio->id);
+			//printf("\nnodo:%s\n",inicio->id);
 			return 1;
 		}
 	}
@@ -361,6 +382,24 @@ int valida_nodo(struct router *inicio,float x,float y,struct router **aux){
 }
 
 /***********************************  PARTE GRAFICA************************************/
+void cambia_color(int pelotax,int pelotay){
+	
+	glPushMatrix(); 
+	glColor3f(1.0,1.0,1.0); 
+	glTranslatef(pelotax,pelotay,0); 
+	glBegin(GL_TRIANGLE_FAN); 
+	glVertex2f(0,0); 
+	for (float ang = 0; ang <= PI*4; ang += PI/8) {
+		cx=radio*cos(ang)+x;
+		cy=radio*sin(ang)+y;
+		glVertex2f(cx,cy);	
+	}
+	glFlush();
+	glEnd(); 
+	glPopMatrix(); 
+	/*glutPostRedisplay();*/
+}
+
 void dibuja_cadena(char *cadena,float x, float y){
 	unsigned int i;
 	glColor3f(1,1,1);
@@ -408,7 +447,7 @@ void dibuja_nodo(){
 	cuenta_router(rout,cont3);
 	printf("\nCantidad de router: %d",cont3);
 	struct vertice *aux=inicio;
-	printf("\nCantidad de vertices: %d",cont);
+	//printf("\nCantidad de vertices: %d",cont);
 	for (int i = 0; i <cont; i++){
 		dibujarEsfera(aux->cor_x,aux->cor_y);
 		dibuja_cadena(aux->nodo,aux->cor_x-10,aux->cor_y+10);
@@ -473,7 +512,7 @@ struct marcado *busca_marcado(struct marcado *marca,char nodo[]){
 		return NULL;
 	}
 	if(strcmp(nodo,marca->ciudad)==0){
-		printf("\nExiste un nodo en marcados");
+		//printf("\nExiste un nodo en marcados");
 		return marca;
 	}
 	busca_marcado(marca->siguiente,nodo);
@@ -506,15 +545,15 @@ int expande(struct arista **inicio,struct marcado **marca,struct etiquetados **e
 	if(*inicio==NULL){
 		return 0;
 	}
-	printf("\npadre:%s acomulado:%0.1f",(*marca)->ciudad,(*marca)->suma);
+	//printf("\npadre:%s acomulado:%0.1f",(*marca)->ciudad,(*marca)->suma);
 	struct marcado *aux2=busca_marcado(*marca,(*inicio)->destino); 	//Tengo que buscar si existe en marcados
 	if(!aux2){
 		struct etiquetados *aux3=busca_etique(*etiqueta,(*inicio)->destino);
 		if(aux3){
-			printf("\nExiste un nodo en etiqetados aux3:%s  distancia:%0.1f",aux3->ciudad,aux3->suma);
-			printf("\nNodo a comparar: %s   peso:%0.1f",(*inicio)->destino,(*inicio)->peso+(*marca)->suma);  
+			//printf("\nExiste un nodo en etiqetados aux3:%s  distancia:%0.1f",aux3->ciudad,aux3->suma);
+			//printf("\nNodo a comparar: %s   peso:%0.1f",(*inicio)->destino,(*inicio)->peso+(*marca)->suma);  
 			if(((*inicio)->peso+(*marca)->suma)<aux3->suma){
-				printf("\nes menor,eliminamos a aux3 de etiquetados"); 
+				//printf("\nes menor,eliminamos a aux3 de etiquetados"); 
 				elimina_etiqueta(etiqueta,aux3->ciudad);  //Eliminamos
 				crea_etique(etiqueta,(*inicio)->destino,(*marca)->suma+(*inicio)->peso,(*marca)->ciudad);  //insertamos el nuevo nodo menor
 			}else{
@@ -522,7 +561,7 @@ int expande(struct arista **inicio,struct marcado **marca,struct etiquetados **e
 			}
 		}else{
 			struct etiquetados *aux=crea_etique(etiqueta,(*inicio)->destino,(*marca)->suma+(*inicio)->peso,padre);
-			printf("\ninsertado:%s",aux->ciudad);	
+			//printf("\ninsertado:%s",aux->ciudad);	
 		}
 	}
 	expande(&(*inicio)->siguiente,marca,etiqueta,padre);
@@ -548,7 +587,7 @@ int busca_indicador(struct etiquetados *inicio,char nodo[]){
 	}
 	if(strcmp(nodo,inicio->ciudad)==0){
 		if(inicio->marca==1){
-			printf("Ya esta en marcados, se eligira otro con un menor costo");
+			//printf("Ya esta en marcados, se eligira otro con un menor costo");
 			return 1;
 		}
 	}
@@ -588,7 +627,7 @@ int parte2(struct router **inicio,struct marcado **marca,struct etiquetados **et
 	
 	struct etiquetados *esclavo; 
 	struct router *aux;
-	printf("\nNodo a expandir:%s",(*inicio)->id);
+	//printf("\nNodo a expandir:%s",(*inicio)->id);
 	if(*marca==NULL){
 		crea_nodo(marca,(*inicio)->id,0,(*inicio)->id);
 	} 
@@ -599,12 +638,12 @@ int parte2(struct router **inicio,struct marcado **marca,struct etiquetados **et
 		esclavo=*etique;
 		mejor_ruta((*etique)->siguiente,&esclavo);
 	}
-	printf("\nMejor ruta: %s  Distancia:%0.1f\n",esclavo->ciudad,esclavo->suma);
+	//printf("\nMejor ruta: %s  Distancia:%0.1f\n",esclavo->ciudad,esclavo->suma);
 	marcar(&esclavo);
 	crea_nodo(marca,esclavo->ciudad,esclavo->suma,esclavo->padre);  //Lo metemos en los marcados
 	aux=busca_router(rout,esclavo->ciudad);  //Aqui me marca error
-	printf("\nAUX:%s",aux->id);
-	mostrar_etiquetados(*etique);
+	//printf("\nAUX:%s",aux->id);
+	//mostrar_etiquetados(*etique);
 	if(contar_marcados(*marca,0)==(contar_router(rout,0)-1)){
 		printf("\nSe marcaron todos los nodos\n");
 		printf("\nRuta minima de: %s para cada nodo es de:\n",nodo);
@@ -617,8 +656,8 @@ int parte2(struct router **inicio,struct marcado **marca,struct etiquetados **et
 }
 
 int algritmo(struct router **inicio){
-	struct marcado *marcados=NULL;
-	struct etiquetados *etiqueta=NULL;
+	/*struct marcado *marcados=NULL;
+	struct etiquetados *etiqueta=NULL;*/
 	printf("\nNodo inicial: %s",(*inicio)->id);
 	parte2(inicio,&marcados,&etiqueta,(*inicio)->id,*inicio);
 	return 1;
@@ -706,17 +745,13 @@ void mousebutton(int button, int state, int x, int y)/*metodo para dar moviemien
 					X1=rx;
 					Y1=ry;
 					rout1=dato;
-					//printf("X1: %d, X2:%d",X1,Y2);
 				}
-				if(cont==2){
-					//printf("SE dio dos clicks derechos");
+				if(cont==2){ /*Se dio un segundo click derecho*/
 					X2=rx;
 					Y2=ry;
 					rout2=dato;
-					//printf("X1: %d, X2:%d,Y1:%d,Y2:%d",X1,X2,Y1,Y2);
 					crea_enlace2(X1,X2,Y1,Y2);
 					cont=0;
-					//printf("\nNodo origen:%s  -  Nodo destino: %s\n",rout1->id,rout2->id);
 					enlazar_router(rout1,rout2);
 					mostrar_router(rout);
 					dibuja_cadena(cadena,fabs(cordenada_x),fabs(cordenada_y));
@@ -724,14 +759,27 @@ void mousebutton(int button, int state, int x, int y)/*metodo para dar moviemien
 			}
 		}		
 	}
-	if(button==GLUT_MIDDLE_BUTTON){
-		printf("\nSe oprimio scroll");
+	if(button==GLUT_MIDDLE_BUTTON && state==GLUT_DOWN){
 		if(valida_nodo(rout,rx,ry,&dato)==1){
-			rout3=dato;
-			printf("\nEncontramos nodo: %s",rout3->id);
-			/*Iniciamos algoritmo*/
-			struct router *aux=busca_router(rout,rout3->id);
-			algritmo(&aux);
+			cont_click=cont_click+1;
+			if(cont_click==1){
+				printf("\nPrimer scroll");
+				rout3=dato;
+				printf("\nEncontramos nodo: %s",rout3->id);
+				cambia_color(rout3->cor_x+10,rout3->cor_y+10);
+				/*Iniciamos algoritmo*/
+				struct router *aux=busca_router(rout,rout3->id);
+				algritmo(&aux);
+			}
+			if(cont_click==2){
+				printf("Segundo scroll");
+				cont_click=0;
+				rout4=dato;
+				struct etiquetados *aux=busca_etique(etiqueta,rout4->id);
+				printf("\nLa distancia minia de %s a %s es de:%0.1f\n",rout3->id,aux->ciudad,aux->suma);
+				libera_etiquetado(&etiqueta); /*Tenemos que liberar memoria*/
+				libera_marcado(&marcados);				
+			}
 		}
 	}
 	glFlush();
@@ -771,25 +819,3 @@ int main(int argc, char *argv[]){
 	glutMainLoop();
 	return 0;
 }
-
-/*
--Falta enlazar los vertices   (Ya quedó)
--IDEAS GENERADAS
--Ver primero como se hace linea  (Ya quedó)
--Copiar la funcion que ya tenemos
-
--En el for , contar los nodos que tiene  (Ya quedó)
-conectados en ese momento el vertice.
-
--Despues dentro de ese for  (Ya quedó)
-crear otro for, que llamara a su vez crea_linea,como parametro,
-tendra las corrdenas origen y destino, o los apuntadores.
-
--Insertar el nombre de los nodos   (ya quedó)
--Falta la funcion del mause, al dar click derecho, crear nodo (Ya quedo)
--Tener en el meni de mause una opcion de enlazar nodos 
--Insertar algoritmo de Dijstra  (Ya se hizo el algoritmo, solo falta implementarlo en el proyecto)
--Ya le insertamos un ID al router cada vezque se crea un nodo con click izquerdo  (Ya quedo)
--Guardamos los nuevos nodos en una estructura, esta nos servira para el algrotimo (Ya quedo)
--Enlazar los nodos de la nueva estructua segun su enlaze en la parte grafica
-*/
